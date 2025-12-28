@@ -16,9 +16,8 @@ def client():
 @pytest.fixture(autouse=True)
 def reset_activities():
     """Reset activities data before each test"""
-    from src import app
-    app.activities.clear()
-    app.activities.update({
+    activities.clear()
+    activities.update({
         "Chess Club": {
             "description": "Learn strategies and compete in chess tournaments",
             "schedule": "Fridays, 3:30 PM - 5:00 PM",
