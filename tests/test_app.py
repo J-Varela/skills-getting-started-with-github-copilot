@@ -16,7 +16,6 @@ def client():
 @pytest.fixture(autouse=True)
 def reset_activities():
     """Reset activities data before each test"""
-    global activities
     activities.clear()
     activities.update({
         "Chess Club": {
@@ -138,6 +137,41 @@ class TestSignupForActivity:
         assert "student1@mergington.edu" in participants
         assert "student2@mergington.edu" in participants
 
+    def test_signup_when_activity_at_capacity(self, client):
+        """Test that signup fails when activity is at maximum capacity"""
+        # Fill up the Chess Club (max 12, currently has 2)
+        for i in range(10):
+            response = client.post(
+                f"/activities/Chess%20Club/signup?email=student{i}@mergington.edu"
+            )
+            assert response.status_code == 200
+        
+        # Now try to add one more (should fail)
+        response = client.post(
+            "/activities/Chess%20Club/signup?email=overflow@mergington.edu"
+        )
+        assert response.status_code == 400
+        data = response.json()
+        assert "full capacity" in data["detail"]
+
+    def test_invalid_email_format(self, client):
+        """Test that signup fails with invalid email format"""
+        invalid_emails = [
+            "notanemail",
+            "@mergington.edu",
+            "student@",
+            "student @mergington.edu",
+            "",
+        ]
+        
+        for invalid_email in invalid_emails:
+            response = client.post(
+                f"/activities/Chess%20Club/signup?email={invalid_email}"
+            )
+            assert response.status_code == 400
+            data = response.json()
+            assert "Invalid email format" in data["detail"]
+
 
 class TestUnregisterFromActivity:
     """Tests for DELETE /activities/{activity_name}/unregister endpoint"""
@@ -194,6 +228,22 @@ class TestUnregisterFromActivity:
         activities_response = client.get("/activities")
         activities_data = activities_response.json()
         assert "michael@mergington.edu" in activities_data["Chess Club"]["participants"]
+
+    def test_unregister_invalid_email_format(self, client):
+        """Test that unregister fails with invalid email format"""
+        invalid_emails = [
+            "notanemail",
+            "@mergington.edu",
+            "student@",
+        ]
+        
+        for invalid_email in invalid_emails:
+            response = client.delete(
+                f"/activities/Chess%20Club/unregister?email={invalid_email}"
+            )
+            assert response.status_code == 400
+            data = response.json()
+            assert "Invalid email format" in data["detail"]
 
 
 class TestActivityCapacity:
